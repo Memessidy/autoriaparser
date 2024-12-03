@@ -1,0 +1,7 @@
+*.db
+.ENV
+ENV
+__pycache__
+.idea
+*.ipynb
+.env
