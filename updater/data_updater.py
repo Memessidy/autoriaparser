@@ -3,7 +3,7 @@ from database.engine import session_maker
 from database import orm_query
 from aiogram import Bot, types
 from common.singleton_decorator import singleton
-from common.DateAndTime import DateAndTime
+from common.date_and_time import DateAndTime
 import asyncio
 
 
@@ -62,27 +62,22 @@ class Updater:
                 car_url = car_item['url']
                 cars_urls.add(car_url)
                 car_price = car_item['price']
-
                 car_db_item = await orm_query.orm_get_car(session, car_url)
-
                 if car_db_item:
                     media_photos = await self.get_car_info_from_db(car_db_item)
 
                     if 'продано' in car_item['date_info'].casefold():
                         await orm_query.orm_delete_car_by_url(session, car_url)
-
                         for chat_id in chat_ids:
                             await bot.send_message(chat_id=chat_id, text="Авто було нещодавно продано: ")
                             await bot.send_media_group(chat_id=chat_id, media=media_photos)
 
                     elif int(car_db_item.price) != int(car_price):
                         await orm_query.orm_update_car_price(session, car_db_item.id, int(car_price))
-
                         for chat_id in chat_ids:
                             await bot.send_message(chat_id=chat_id, text=
                             f'Ціна змінилася! Стара ціна на авто: {car_db_item.price}$, нова ціна: {car_price}$')
                             await bot.send_media_group(chat_id=chat_id, media=media_photos)
-
                 else:
                     if 'продано' in car_item['date_info'].casefold():
                         continue
@@ -104,7 +99,7 @@ class Updater:
                     await bot.send_message(chat_id=chat_id, text="Авто зникло з пошуку: ")
                     await bot.send_media_group(chat_id=chat_id, media=media_photos)
                 await orm_query.orm_delete_car_by_url(session, car_item.url)
-                print(f"Авто {car_item.url} видалено зі списку (зникло з пошуку)")
+                print(f"Auto {car_item.url} has been deleted from list")
 
     async def update_by_time(self, bot: Bot):
         while True:

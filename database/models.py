@@ -1,6 +1,6 @@
 from sqlalchemy import String, Text, Float, DateTime, Integer, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from common.DateAndTime import DateAndTime
+from common.date_and_time import DateAndTime
 
 
 class Base(DeclarativeBase):

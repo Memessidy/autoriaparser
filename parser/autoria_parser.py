@@ -3,9 +3,6 @@ from bs4 import BeautifulSoup
 import asyncio
 import config
 
-# import nest_asyncio
-# nest_asyncio.apply()
-
 
 class AutoRiaParser:
     def __init__(self):
