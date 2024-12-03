@@ -28,7 +28,7 @@ async def on_shutdown():
     print('Shutting down...')
 
 
-async def main():
+async def run_bot():
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
     dp.update.middleware(DataBaseSession(session_pool=session_maker))
@@ -36,7 +36,12 @@ async def main():
     # await bot.delete_my_commands(scope=types.BotCommandScopeAllPrivateChats())
     await bot.set_my_commands(commands=private, scope=types.BotCommandScopeAllPrivateChats())
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
-    await updater.check_updates(bot)
+
+
+async def main():
+    asyncio.create_task(updater.update_by_time(bot))
+    await run_bot()
+
 
 if __name__ == '__main__':
     asyncio.run(main())

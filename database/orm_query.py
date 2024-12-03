@@ -1,5 +1,6 @@
 from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+import json
 
 from database.models import Car, User
 
@@ -14,10 +15,29 @@ async def orm_add_car(session: AsyncSession, data: dict):
         city=data["city"],
         date_info=data["date_info"],
         video_link=data["video_link"],
-        photos=data["photos"])
+        photos=json.dumps(data["photos"]))
 
     session.add(obj)
     await session.commit()
+
+
+async def orm_add_many_cars(session: AsyncSession, data: dict):
+    car_data = []
+    for car in data:
+        car_data.append(
+            Car(model=car['model'],
+                year=car['year'],
+                url=car['url'],
+                price=car['price'],
+                mileage=car['mileage'],
+                city=car['city'],
+                date_info=car['date_info'],
+                video_link=car['video_link'],
+                photos=json.dumps(car['photos']))
+        )
+    async with session as s:
+        s.add_all(car_data)
+        await s.commit()
 
 
 async def orm_get_cars(session: AsyncSession):
