@@ -1,4 +1,5 @@
 from aiogram import types, Router, F, Bot
+from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
 from sqlalchemy.ext.asyncio import AsyncSession
 import json
@@ -17,11 +18,12 @@ async def start_cmd(message: types.Message):
     await message.answer('Вітання!',
                          reply_markup=reply.keyboard_gen(
                              "Показати перші 5 автомобілів",
+                             "Список всіх авто",
                              "Доєднатися до розсилання",
                              "Від'єднатися від розсилання",
                              "Час наступного оновлення",
                              placeholder="Що вас цікавить?",
-                             sizes=(2, 2,)
+                             sizes=(2, 2, 1)
                          ))
 
 
@@ -70,3 +72,16 @@ async def show_cars(message: types.Message, session: AsyncSession, bot: Bot):
             media_data = await updater.get_car_info_from_db(car)
             await bot.send_media_group(chat_id=message.chat.id, media=media_data)
         await message.answer("ОК, список перших 5 автомобілів: ")
+
+
+@user_private_router.message(F.text.lower() == 'список всіх авто')
+async def show_cars_list(message: types.Message, session: AsyncSession, bot: Bot):
+    chat_id = message.chat.id
+    if await orm_query.orm_get_user_by_chat_id(session, chat_id) is None:
+        await message.answer("Спочатку необхідно підписатися на розсилання")
+    else:
+        cars = await orm_query.orm_get_cars(session)
+        res = ''
+        for index, car in enumerate(cars, start=1):
+            res += f"{index}. <a href='{car.url}'>{car.model} {car.year}</a>\n"
+        await message.answer("Список всіх авто:\n" + res)
