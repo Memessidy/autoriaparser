@@ -34,7 +34,11 @@ class Updater:
         if not isinstance(car_db_item, dict):
             car_db_item = car_db_item.__dict__
 
-        photo = json.loads(car_db_item['photos'])[0:5]
+        if not isinstance(car_db_item['photos'], list):
+            photo = json.loads(car_db_item['photos'])[0:5]
+        else:
+            photo = car_db_item['photos'][0:5]
+
         video_link = car_db_item['video_link']
         media_photos = [types.InputMediaPhoto(media=pic) for pic in photo]
 
@@ -67,10 +71,10 @@ class Updater:
                     media_photos = await self.get_car_info_from_db(car_db_item)
 
                     if 'продано' in car_item['date_info'].casefold():
-                        await orm_query.orm_delete_car_by_url(session, car_url)
                         for chat_id in chat_ids:
                             await bot.send_message(chat_id=chat_id, text="Авто було нещодавно продано: ")
                             await bot.send_media_group(chat_id=chat_id, media=media_photos)
+                        await orm_query.orm_delete_car_by_url(session, car_url)
 
                     elif int(car_db_item.price) != int(car_price):
                         await orm_query.orm_update_car_price(session, car_db_item.id, int(car_price))
