@@ -54,6 +54,7 @@ async def orm_get_car(session: AsyncSession, car_url: str):
 
 async def orm_update_car_price(session: AsyncSession, car_id: int, new_price: float):
     car = await session.get(Car, car_id)
+    car.photos = json.dumps(car.photos)
     car.price = new_price
     await session.commit()
 

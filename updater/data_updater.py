@@ -5,7 +5,7 @@ from aiogram import Bot, types
 from common.singleton_decorator import singleton
 from common.date_and_time import DateAndTime
 import asyncio
-
+import json
 
 @singleton
 class Updater:
@@ -34,7 +34,7 @@ class Updater:
         if not isinstance(car_db_item, dict):
             car_db_item = car_db_item.__dict__
 
-        photo = car_db_item['photos'][0:5]
+        photo = json.loads(car_db_item['photos'])[0:5]
         video_link = car_db_item['video_link']
         media_photos = [types.InputMediaPhoto(media=pic) for pic in photo]
 
@@ -93,6 +93,7 @@ class Updater:
 
             cars_not_selling_links = list(db_cars_urls.difference(cars_urls))
             items_not_in_list = await orm_query.orm_get_cars_by_urls(session, cars_not_selling_links)
+
             for car_item in items_not_in_list:
                 media_photos = await self.get_car_info_from_db(car_item)
                 for chat_id in chat_ids:
@@ -104,4 +105,7 @@ class Updater:
     async def update_by_time(self, bot: Bot):
         while True:
             await asyncio.sleep(self.__time_engine.time_to_next_update[0])
-            await self.check_updates(bot)
+            try:
+                await self.check_updates(bot)
+            except Exception as e:
+                print(e)
