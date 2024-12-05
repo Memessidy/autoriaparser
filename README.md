@@ -18,5 +18,3 @@ Deploy:
 - delete .env file, than add environment variables form .env
 
 The link to the current search is located in the ```config.py``` file
-
-This bot: https://t.me/dg97seu5ma7j1iqhgz1kBot

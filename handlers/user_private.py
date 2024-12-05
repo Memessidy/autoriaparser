@@ -68,7 +68,7 @@ async def show_cars(message: types.Message, session: AsyncSession, bot: Bot):
     else:
         cars = await orm_query.orm_get_cars(session)
         for car in cars[0:5][::-1]:
-            media_data = await updater.get_car_info_from_db(car)
+            media_data = await updater.get_car_info_from_item(car)
             await bot.send_media_group(chat_id=message.chat.id, media=media_data)
         await message.answer("ОК, список перших 5 автомобілів: ")
 
