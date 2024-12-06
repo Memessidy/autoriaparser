@@ -1,8 +1,6 @@
 from aiogram import types, Router, F, Bot
-from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
 from sqlalchemy.ext.asyncio import AsyncSession
-import json
 from database import orm_query
 from filters.chat_types import ChatTypeFilter
 from keyboards import reply
@@ -11,6 +9,7 @@ from updater.data_updater import Updater
 
 user_private_router = Router()
 user_private_router.message.filter(ChatTypeFilter(['private']))
+updater = Updater()
 
 
 @user_private_router.message(CommandStart())
@@ -43,6 +42,7 @@ async def subscribe_the_mailing_list(message: types.Message, session: AsyncSessi
     if not await orm_query.orm_get_user_by_chat_id(session, chat_id):
         await orm_query.orm_add_user(session, chat_id, username, first_name, last_name)
         await message.answer("Вас доєднано до розсилання!")
+        updater.user_list_updated = True
         print(f"Username: {username} added to mailing list")
     else:
         await message.answer("Ви вже були доєднані до розсилання раніше")
@@ -54,6 +54,7 @@ async def unsubscribe_the_mailing_list(message: types.Message, session: AsyncSes
     chat_id = message.chat.id
     if await orm_query.orm_get_user_by_chat_id(session, chat_id) is not None:
         await orm_query.orm_delete_user_by_chat_id(session, chat_id)
+        updater.user_list_updated = True
         await message.answer("Вас від'єднано від розсилання")
         print(f"Username: {username} deleted from mailing list")
 
@@ -62,7 +63,6 @@ async def unsubscribe_the_mailing_list(message: types.Message, session: AsyncSes
 @user_private_router.message(F.text.lower() == 'показати перші 5 автомобілів')
 async def show_cars(message: types.Message, session: AsyncSession, bot: Bot):
     chat_id = message.chat.id
-    updater = Updater()
     if await orm_query.orm_get_user_by_chat_id(session, chat_id) is None:
         await message.answer("Спочатку необхідно підписатися на розсилання")
     else:
