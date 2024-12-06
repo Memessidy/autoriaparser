@@ -58,10 +58,11 @@ async def orm_update_car_price(session: AsyncSession, car_id: int, new_price: fl
     await session.commit()
 
 
-async def orm_delete_car_by_url(session: AsyncSession, url: str):
-    query = delete(Car).where(Car.url == url)
-    await session.execute(query)
-    await session.commit()
+async def orm_delete_car_by_id(session: AsyncSession, car_id: int):
+    car = await session.get(Car, car_id)
+    if car:
+        await session.delete(car)
+        await session.commit()
 
 
 async def orm_get_cars_by_urls(session: AsyncSession, urls: list[str]):
