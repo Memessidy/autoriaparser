@@ -14,7 +14,7 @@ class Updater:
         self.__parser = AutoRiaParser()
         self.__async_session = session_maker()
         self.__time_engine = DateAndTime()
-        self.__chat_ids = None
+        self.__chat_ids = []
         self.user_list_updated = True
 
     async def get_chat_ids(self):
@@ -39,8 +39,21 @@ class Updater:
             await self.update_all()
 
     async def send_messages(self, user_ids, media_photos, bot):
-        tasks = [bot.send_media_group(chat_id=chat_id, media=media_photos) for chat_id in user_ids]
+        tasks = [asyncio.create_task(self._send_media_safe(bot, chat_id, media_photos)) for chat_id in user_ids]
         await asyncio.gather(*tasks)
+
+    async def _send_media_safe(self, bot, chat_id, media_photos):
+        try:
+            await bot.send_media_group(chat_id=chat_id, media=media_photos)
+            print('Media about changing price sent successfully')
+        except Exception as e:
+            await asyncio.sleep(0.5)
+            for _ in range(5):
+                try:
+                    await bot.send_media_group(chat_id=chat_id, media=media_photos)
+                    return
+                except Exception as e:
+                    print(f"Failed to send message to chat {chat_id}: {e}")
 
     @staticmethod
     async def get_car_info_from_item(car_db_item, user_string='', price=None):
@@ -79,6 +92,26 @@ class Updater:
                 await orm_query.orm_delete_car_by_url(session, car_item.url)
                 print(f"Auto {car_item.url} has been deleted from list")
 
+    async def process_new_car(self, car_item, bot, session, car_url):
+        car_item['video_link'], car_item['photos']\
+            = await self.__parser.get_photos_videos_by_link(car_item['url'])
+        await orm_query.orm_add_car(session, car_item)
+        media_photos = await self.get_car_info_from_item(car_item, user_string="Нове авто додано до списку: ")
+        await self.send_messages(self.__chat_ids, media_photos, bot)
+
+    async def process_car_change(self, bot, car_db_item, session, car_price):
+        media_photos = await self.get_car_info_from_item(car_db_item, user_string=
+        f'Ціна змінилася! Стара ціна на авто: {car_db_item.price}$, нова ціна: {car_price}$',
+                                                         price=car_price)
+        await orm_query.orm_update_car_price(session, car_db_item.id, int(car_price))
+        await self.send_messages(self.__chat_ids, media_photos, bot)
+
+    async def process_sold_car(self, bot, car_db_item, session, car_url):
+        media_photos = await self.get_car_info_from_item(car_db_item, user_string=
+        'Авто було нещодавно продано: ')
+        await self.send_messages(self.__chat_ids, media_photos, bot)
+        await orm_query.orm_delete_car_by_url(session, car_url)
+
     async def check_updates(self, bot: Bot):
         print(f'Checking updates...{self.__time_engine.current_time.strftime("%H:%M:%S")}')
         await self.__parser.cars_html_collect()
@@ -95,30 +128,18 @@ class Updater:
                 car_db_item = await orm_query.orm_get_car(session, car_url)
                 if car_db_item:
                     if 'продано' in car_item['date_info'].casefold():
-                        media_photos = await self.get_car_info_from_item(car_db_item, user_string=
-                                                                         'Авто було нещодавно продано: ')
-
-                        await self.send_messages(self.__chat_ids, media_photos, bot)
-                        await orm_query.orm_delete_car_by_url(session, car_url)
-
+                        await self.process_sold_car(bot, car_db_item, session, car_price)
+                        print(f"Auto: {car_url} has been sold!")
                     elif int(car_db_item.price) != int(car_price):
-                        media_photos = await self.get_car_info_from_item(car_db_item, user_string=
-                        f'Ціна змінилася! Стара ціна на авто: {car_db_item.price}$, нова ціна: {car_price}$',
-                                                                         price=car_price)
-                        await orm_query.orm_update_car_price(session, car_db_item.id, int(car_price))
-                        await self.send_messages(self.__chat_ids, media_photos, bot)
+                        print(f"Auto price changed!\n Car url:{car_url}\n Old price:{car_db_item.price}"
+                              f"\n New price:{car_price}")
+                        await self.process_car_change(bot, car_db_item, session, car_price)
                 else:
                     if 'продано' in car_item['date_info'].casefold():
                         continue
                     else:
-                        car_item['video_link'], \
-                        car_item['photos'] = await self.__parser.get_photos_videos_by_link(car_item['url'])
-                        await orm_query.orm_add_car(session, car_item)
-                        media_photos = await self.get_car_info_from_item(car_item, user_string=
-                        "Нове авто додано до списку: ")
-                        await self.send_messages(self.__chat_ids, media_photos, bot)
+                        await self.process_new_car(car_item, bot, session, car_url)
                         print(f'New car has been added! {car_url}')
-
         await self.check_retired_cars(bot, cars_urls)
 
     async def update_by_time(self, bot: Bot):
