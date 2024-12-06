@@ -5,7 +5,7 @@ from aiogram.enums import ParseMode
 import config
 from common.bot_cmds_list import private
 from handlers.user_private import user_private_router
-from database.engine import create_db, drop_db, session_maker
+from database.engine import create_db, session_maker
 from middlewares.db import DataBaseSession
 from updater.data_updater import Updater
 
