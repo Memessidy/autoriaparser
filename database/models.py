@@ -12,7 +12,7 @@ class Base(DeclarativeBase):
 class Car(Base):
     __tablename__ = 'car'
 
-    id: Mapped[int] = mapped_column(primary_key=True, auto_increment=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement='auto')
     model: Mapped[str] = mapped_column(String(150), nullable=False)
     year: Mapped[int] = mapped_column(Integer, nullable=False)
     url: Mapped[str] = mapped_column(String(150), nullable=False, unique=True)
@@ -27,7 +27,7 @@ class Car(Base):
 class User(Base):
     __tablename__ = 'user'
 
-    id: Mapped[int] = mapped_column(primary_key=True, auto_increment=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement='auto')
     chat_id: Mapped[int] = mapped_column(Integer, nullable=False, unique=True)
     username: Mapped[str] = mapped_column(String(150), nullable=True)
     first_name: Mapped[str] = mapped_column(String(150), nullable=True)
