@@ -1,18 +1,21 @@
 from aiogram import types, Router, F, Bot
 from aiogram.filters import CommandStart, Command
 from sqlalchemy.ext.asyncio import AsyncSession
-from database import orm_query
+from common.cars import Cars
 from filters.chat_types import ChatTypeFilter
 from keyboards import reply
 from common.date_and_time import DateAndTime
 from updater.data_updater import Updater
 from common.users import Users
+from common.message_sender import MessageSender
 
 user_private_router = Router()
 user_private_router.message.filter(ChatTypeFilter(['private']))
 updater = Updater()
 users = Users()
 dt = DateAndTime()
+cars = Cars()
+msg_sender = MessageSender()
 
 
 @user_private_router.message(CommandStart())
@@ -67,21 +70,21 @@ async def show_cars(message: types.Message, session: AsyncSession, bot: Bot):
     if not await users.check_user_in_list(chat_id):
         await message.answer("Спочатку необхідно підписатися на розсилання")
     else:
-        cars = await orm_query.orm_get_cars(session)
-        for car in cars[0:5][::-1]:
-            media_data = await updater.get_car_info_from_item(car)
+        cars_vals = await cars.get_cars()
+        for car in cars_vals[0:5][::-1]:
+            media_data = await msg_sender.get_car_info_from_item(car)
             await bot.send_media_group(chat_id=message.chat.id, media=media_data)
         await message.answer("ОК, список перших 5 автомобілів: ")
 
 
 @user_private_router.message(F.text.lower() == 'список всіх авто')
-async def show_cars_list(message: types.Message, session: AsyncSession):
+async def show_cars_list(message: types.Message):
     chat_id = message.chat.id
     if not await users.check_user_in_list(chat_id):
         await message.answer("Спочатку необхідно підписатися на розсилання")
     else:
-        cars = await orm_query.orm_get_cars(session)
+        cars_vals = await cars.get_cars()
         res = ''
-        for index, car in enumerate(cars, start=1):
-            res += f"{index}. <a href='{car.url}'>{car.model} {car.year}</a>\n"
+        for index, car in enumerate(cars_vals, start=1):
+            res += f"{index}. <a href='{car['url']}'>{car['model']} {car['year']}</a>\n"
         await message.answer("Список всіх авто:\n" + res)

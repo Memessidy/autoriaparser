@@ -21,10 +21,10 @@ async def orm_add_car(session: AsyncSession, data: dict):
     await session.commit()
 
 
-async def orm_add_many_cars(session: AsyncSession, data: dict):
-    car_data = []
-    for car in data:
-        car_data.append(
+async def orm_add_many_cars(session: AsyncSession, car_data: list):
+    cars_objs = []
+    for car in car_data:
+        cars_objs.append(
             Car(model=car['model'],
                 year=car['year'],
                 url=car['url'],
@@ -36,7 +36,7 @@ async def orm_add_many_cars(session: AsyncSession, data: dict):
                 photos=json.dumps(car['photos']))
         )
     async with session as s:
-        s.add_all(car_data)
+        s.add_all(cars_objs)
         await s.commit()
 
 
