@@ -32,5 +32,3 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(150), nullable=True)
     first_name: Mapped[str] = mapped_column(String(150), nullable=True)
     last_name: Mapped[str] = mapped_column(String(150), nullable=True)
-    is_active: Mapped[bool] = mapped_column(default=False)
-

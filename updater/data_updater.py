@@ -4,6 +4,7 @@ from database import orm_query
 from aiogram import Bot, types
 from common.singleton_decorator import singleton
 from common.date_and_time import DateAndTime
+from common.users import Users
 import asyncio
 import json
 
@@ -14,39 +15,26 @@ class Updater:
         self.__parser = AutoRiaParser()
         self.__async_session = session_maker()
         self.__time_engine = DateAndTime()
-        self.__chat_ids = []
-        self.user_list_updated = True
+        self.__users = Users()
 
-    async def get_chat_ids(self):
-        if self.user_list_updated:
-            async with self.__async_session as session:
-                self.__chat_ids = [user.chat_id for user in await orm_query.orm_get_users(session)]
-            self.user_list_updated = False
-
-    async def update_all(self):
+    async def load_data_on_start(self):
+        print('Loading data on start')
+        await self.__users.update_chat_ids()
         await self.__parser.parse_all()
         await orm_query.orm_add_many_cars(self.__async_session, self.__parser.cars_data)
 
-    async def get_cars(self):
-        async with self.__async_session as session:
-            cars = await orm_query.orm_get_cars(session)
-        return cars
-
-    async def load_data_on_start(self):
-        cars = await self.get_cars()
-        if not len(cars):
-            print('Loading data on start')
-            await self.update_all()
-
-    async def send_messages(self, user_ids, media_photos, bot):
+    async def send_messages(self, media_photos, bot):
+        user_ids = await self.__users.user_ids
         tasks = [asyncio.create_task(self._send_media_safe(bot, chat_id, media_photos)) for chat_id in user_ids]
         await asyncio.gather(*tasks)
 
-    async def _send_media_safe(self, bot, chat_id, media_photos):
+    @staticmethod
+    async def _send_media_safe(bot, chat_id, media_photos):
         try:
             await bot.send_media_group(chat_id=chat_id, media=media_photos)
             print('Message sent successfully')
         except Exception as e:
+            print(e)
             await asyncio.sleep(0.5)
             for ind in range(2, 5):
                 try:
@@ -89,28 +77,28 @@ class Updater:
 
             for car_item in items_not_in_list:
                 media_photos = await self.get_car_info_from_item(car_item, user_string="Авто зникло з пошуку: ")
-                await self.send_messages(self.__chat_ids, media_photos, bot)
+                await self.send_messages(media_photos, bot)
                 await orm_query.orm_delete_car_by_id(session, car_item.id)
                 print(f"Auto {car_item.url} has been deleted from list")
 
     async def process_new_car(self, car_item, bot, session):
-        car_item['video_link'], car_item['photos']\
+        car_item['video_link'], car_item['photos'] \
             = await self.__parser.get_photos_videos_by_link(car_item['url'])
         await orm_query.orm_add_car(session, car_item)
         media_photos = await self.get_car_info_from_item(car_item, user_string="Нове авто додано до списку: ")
-        await self.send_messages(self.__chat_ids, media_photos, bot)
+        await self.send_messages(media_photos, bot)
 
     async def process_car_change(self, bot, car_db_item, session, car_price):
         media_photos = await self.get_car_info_from_item(car_db_item, user_string=
         f'Ціна змінилася! Стара ціна на авто: {car_db_item.price}$, нова ціна: {car_price}$',
                                                          price=car_price)
         await orm_query.orm_update_car_price(session, car_db_item.id, int(car_price))
-        await self.send_messages(self.__chat_ids, media_photos, bot)
+        await self.send_messages(media_photos, bot)
 
     async def process_sold_car(self, bot, car_db_item, session):
         media_photos = await self.get_car_info_from_item(car_db_item, user_string=
         'Авто було нещодавно продано: ')
-        await self.send_messages(self.__chat_ids, media_photos, bot)
+        await self.send_messages(media_photos, bot)
         await orm_query.orm_delete_car_by_id(session, car_db_item.id)
 
     async def check_updates(self, bot: Bot):
@@ -119,8 +107,6 @@ class Updater:
         await self.__parser.get_cars_info()
 
         cars_urls = set()
-        await self.get_chat_ids()
-
         async with self.__async_session as session:
             for car_item in self.__parser.cars_data:
                 car_url = car_item['url']

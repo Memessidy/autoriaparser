@@ -1,4 +1,4 @@
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 import json
 
@@ -79,16 +79,9 @@ async def orm_add_user(session: AsyncSession, chat_id: int, username: str = None
         username=username,
         first_name=first_name,
         last_name=last_name,
-        is_active=True
     )
     session.add(new_user)
     await session.commit()
-
-
-async def orm_get_user_by_chat_id(session: AsyncSession, chat_id: int):
-    query = select(User).where(User.chat_id == chat_id)
-    result = await session.execute(query)
-    return result.scalar()
 
 
 async def orm_delete_user_by_chat_id(session: AsyncSession, chat_id: int):

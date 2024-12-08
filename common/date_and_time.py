@@ -20,9 +20,3 @@ class DateAndTime:
     @property
     def current_time(self):
         return datetime.now(self.__tz)
-
-
-if __name__ == '__main__':
-    dt = DateAndTime()
-    print(dt.time_to_next_update)
-    print(dt.current_time)
